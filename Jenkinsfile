@@ -110,6 +110,13 @@ pipeline {
                 }
             }
         }
+        stage('Update Kubernetes Manifest') {
+    steps {
+        script {
+            sh "sed -i 's|image:.*|image: ${IMAGE_NAME}:${IMAGE_TAG}|g' deploymentservice.yml"
+        }
+    }
+}
         stage('Deploy to k8s'){
             steps{
                 script{
