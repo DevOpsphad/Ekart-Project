@@ -4,6 +4,7 @@ pipeline {
     environment {
         SCANNER_HOME = tool 'sonar-scanner'
         NVD_API_KEY = credentials('nvd-api-key')  // Jenkins secret text credential
+        IMAGE_NAME = "phad3454/ekart"
     }
 
     tools {
@@ -66,19 +67,39 @@ pipeline {
         
 
         stage('build and Tag docker image') {
-            steps {
-                script {
-                        sh "docker build -t phad3454/ekart:latest -f docker/Dockerfile ."
-                    }
-            }
+ steps {
+     script {
+
+            def DATE = sh(
+                script: "date +%Y%m%d",
+                returnStdout: true
+            ).trim()
+
+            def COMMIT = sh(
+                script: "git rev-parse --short=5 HEAD",
+                returnStdout: true
+            ).trim()
+
+            env.IMAGE_TAG = "${DATE}-${COMMIT}"
+
+            echo "Docker Image Tag: ${env.IMAGE_TAG}"
+
+            sh """
+                docker build -t ${IMAGE_NAME}:${IMAGE_TAG} \
+                             -t ${IMAGE_NAME}:latest \
+                             -f docker/Dockerfile .
+            """
         }
+    }
+}
 
         stage('Push image to Hub'){
             steps{
                 script{
                    withCredentials([string(credentialsId: 'dockerhub-pwd', variable: 'dockerhubpwd')]) {
                    sh 'docker login -u phad3454 -p ${dockerhubpwd}'}
-                   sh 'docker push phad3454/ekart:latest'
+                   sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
+                   sh "docker push ${IMAGE_NAME}:latest"
                 }
             }
         }
